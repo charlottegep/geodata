@@ -17,6 +17,7 @@ class GeodataDB:
             self.create_db()
             self.conn = psycopg2.connect(**self.conn_info)
             self.cur = self.conn.cursor()
+            self.cur.execute('create extension postgis')
 
     def connect(self):
         self.conn = psycopg2.connect(**self.conn_info)
