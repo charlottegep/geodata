@@ -1,23 +1,26 @@
 import psycopg2
+import geopandas as gpd
 from configparser import ConfigParser
-from psycopg2 import sql
 from typing import Dict
+from sqlalchemy import create_engine
 
 
 class GeodataDB:
     def __init__(self):
         self.conn_info = self.load_conn_info('database.ini')
-
-        # connect to engine to create database
-        self.initial_connect = f"user={self.conn_info['user']} password={self.conn_info['password']}"
-        self.conn = psycopg2.connect(self.initial_connect)
-        self.cur = self.conn.cursor()
-        self.create_db()
+        try:
+            self.conn = psycopg2.connect(**self.conn_info)
+            self.cur = self.conn.cursor()
+        except psycopg2.OperationalError as err:
+            print(f"Database {self.conn_info['database']} does not exist, creating new database from info in "
+                  f"database.ini")
+            self.create_db()
+            self.conn = psycopg2.connect(**self.conn_info)
+            self.cur = self.conn.cursor()
 
     def connect(self):
         self.conn = psycopg2.connect(**self.conn_info)
         self.cur = self.conn.cursor()
-        return self.cur
 
     def query(self, query):
         self.cur.execute(query)
@@ -33,6 +36,10 @@ class GeodataDB:
         return conn_info
 
     def create_db(self) -> None:
+        initial_connect = f"user={self.conn_info['user']} password={self.conn_info['password']}"
+        self.conn = psycopg2.connect(initial_connect)
+        self.cur = self.conn.cursor()
+
         # create database requires autocommit so temporarily turn this on
         self.conn.autocommit = True
         sql_query = f"CREATE DATABASE {self.conn_info['database']}"
@@ -41,25 +48,16 @@ class GeodataDB:
             self.cur.execute(sql_query)
         except Exception as e:
             print(f'{type(e).__name__}: {e}')
-            print(f'Query: {self.cur.query}')
             self.cur.close()
         else:
             self.conn.autocommit = False
 
-    def create_table(self, table_name: str) -> None:
-        sql_query = f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                GRID_POINTS int,
-                GEOMETRY float,
-                DEPTH float          
-            )
-        """
-        try:
-            self.cur.execute(sql.SQL(sql_query).format(table_name=sql.Identifier(table_name), ))
-        except Exception as e:
-            print(f'{type(e).__name__}: {e}')
-            print(f'Query: {self.cur.query}')
-            self.conn.rollback()
-            self.cur.close()
-        else:
-            self.conn.commit()
+    def dataframe_to_table(self, gdf: gpd.GeoDataFrame, table: str):
+        connect = "postgresql+psycopg2://%s:%s@%s:5432/%s" % (
+            self.conn_info['user'],
+            self.conn_info['password'],
+            self.conn_info['host'],
+            self.conn_info['database']
+        )
+        engine = create_engine(connect)
+        gdf.to_postgis(table, engine)
