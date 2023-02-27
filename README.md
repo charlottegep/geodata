@@ -1,4 +1,4 @@
-# geodata
+# geodata - WIP
 
 I wanted to explore working with geospatial data and learning how to work with this field's specialized datatypes. This is a small data ingestion service to extract data from a GeoTIFF, process it, then load it into a PostgreSQL database. 
 
