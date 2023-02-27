@@ -14,7 +14,7 @@ user=postgres
 password=postgres
 ```
 
-The service uses PostgreSQL, so be sure you have PostgreSQL installed. If you receive ```psycopg2.errors.UndefinedObject: type "geometry" does not exist``` when you first run, you may need to run ```CREATE EXTENSION postgis``` in the pgAdmin console of the database to make sure the geographic objects are supported.
+The service uses PostgreSQL, so be sure you have PostgreSQL and PostGIS installed so the geographic objects are supported in the database.
 
 The ```dataset``` directory should contain the ```H12482.tiff``` image to be processed. I plan to remove the hardcoded image and make this a parameter at a later date to try with other images.
 
